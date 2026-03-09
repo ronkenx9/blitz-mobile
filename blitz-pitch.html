@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLITZ MOBILE | PITCH DECK</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #E8B84B;
+            --purple: #9945FF;
+            --crimson: #C41E3A;
+            --bg: #1A1A2E;
+            --panel: rgba(26, 26, 46, 0.95);
+            --border: #2E2E4E;
+            --text: #E0E0FF;
+            --dim: #8F8FBF;
+            --blue: #14F195;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: crosshair; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* SCANLINE EFFECT */
+        body::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .slide {
+            flex: 1;
+            display: none;
+            padding: 4rem;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .slide.active { display: flex; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(50px); filter: blur(10px); }
+            to { opacity: 1; transform: translateX(0); filter: blur(0); }
+        }
+
+        h1 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 2.5rem;
+            color: var(--gold);
+            margin-bottom: 2rem;
+            text-shadow: 4px 4px 0px var(--crimson);
+            letter-spacing: -2px;
+        }
+
+        h2 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1rem;
+            color: var(--purple);
+            margin-bottom: 3rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        p {
+            font-size: 1.8rem;
+            max-width: 800px;
+            line-height: 1.4;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+        }
+
+        .highlight { color: var(--gold); }
+        .accent { color: var(--blue); }
+
+        .slide-nav {
+            position: absolute;
+            bottom: 3rem;
+            right: 4rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: var(--panel);
+            border: 2px solid var(--purple);
+            color: var(--purple);
+            padding: 1rem 2rem;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+            box-shadow: 4px 4px 0px var(--purple);
+        }
+
+        .nav-btn:hover {
+            background: var(--purple);
+            color: white;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px white;
+        }
+
+        .nav-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow:none;
+        }
+
+        .slide-counter {
+            position: absolute;
+            bottom: 3rem;
+            left: 4rem;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
+            color: var(--dim);
+        }
+
+        /* GRID BACKGROUND */
+        .grid {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        .tech-box {
+            border: 1px solid var(--purple);
+            padding: 2rem;
+            background: rgba(153, 69, 255, 0.05);
+            position: relative;
+            margin-top: 1rem;
+        }
+
+        .tech-box::before {
+            content: "COMMAND_LOG";
+            position: absolute;
+            top: -10px; left: 10px;
+            background: var(--bg);
+            color: var(--purple);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.5rem;
+            padding: 0 5px;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .list-item::before {
+            content: ">>";
+            color: var(--crimson);
+            font-weight: bold;
+        }
+
+        .logo-small {
+            width: 120px;
+            height: 120px;
+            background: var(--purple);
+            border: 4px solid var(--gold);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .stagger {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: staggerIn 0.4s forwards;
+        }
+
+        @keyframes staggerIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .s1 { animation-delay: 0.2s; }
+        .s2 { animation-delay: 0.4s; }
+        .s3 { animation-delay: 0.6s; }
+
+    </style>
+</head>
+<body>
+    <div class="grid"></div>
+    <div id="app">
+        <!-- SLIDE 1: HOOK -->
+        <div class="slide active" id="slide-1">
+            <div class="logo-small">⚔️</div>
+            <h2>MISSION START</h2>
+            <h1 class="stagger s1">BLITZ MOBILE</h1>
+            <p class="stagger s2">The 0xFF Arena of <span class="highlight">Price Discovery</span>.</p>
+            <p class="stagger s3">Don't just track the market. <span class="crimson">Blitz it.</span></p>
+        </div>
+
+        <!-- SLIDE 2: PROBLEM -->
+        <div class="slide" id="slide-2">
+            <h2>THE ANOMALY</h2>
+            <h1>DEFI IS DISCONNECTED</h1>
+            <div class="tech-box">
+                <div class="list-item">Mobile users are priced out of high-stakes strategy.</div>
+                <div class="list-item">Price feeds are boring charts, not interactive experiences.</div>
+                <div class="list-item">Most games lack <span class="highlight">real skin in the game.</span></div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: SOLUTION -->
+        <div class="slide" id="slide-3">
+            <h2>THE FIX</h2>
+            <h1>THE BLITZ ARENA</h1>
+            <p>A hyper-fast, PvP tactical bidding game where <span class="highlight">market intuition</span> is the ultimate weapon.</p>
+            <p>Built for the mobile-native generation. Instant settlement. Instant glory.</p>
+        </div>
+
+        <!-- SLIDE 4: HOW IT WORKS -->
+        <div class="slide" id="slide-4">
+            <h2>CORE MECHANICS</h2>
+            <h1>GAME THEORY 101</h1>
+            <div class="tech-box">
+                <div class="list-item"><b>BID:</b> Guess the "True Value" of artifacts in 10 seconds.</div>
+                <div class="list-item"><b>CURSE:</b> Overbid and you lose SOL. Underbid and you win the round.</div>
+                <div class="list-item"><b>SURVIVE:</b> Lowest score is eliminated. Last player standing takes the pot.</div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: SUSTAINABILITY -->
+        <div class="slide" id="slide-5">
+            <h2>SUSTAINABILITY</h2>
+            <h1>THE ECONOMY</h1>
+            <p><b>REVENUE:</b> <span class="highlight">2.5% Blitz Fee</span> on every PvP prize pool.</p>
+            <p><b>BREAK-EVEN:</b> <span class="accent">1,000 active daily matches</span> (~$500/day revenue).</p>
+            <p><b>PARTNERS:</b> <span class="purple">MagicBlock</span> (Ephemeral Rollups), <span class="gold">Jupiter</span> (Asset Feeds), <span class="crimson">RadiantsDAO</span> (Community Arena).</p>
+        </div>
+
+        <!-- SLIDE 6: UNIQUE -->
+        <div class="slide" id="slide-6">
+            <h2>DIFFERENTIATOR</h2>
+            <h1>SKILL > WHALES</h1>
+            <p>Unlike raffles, Blitz rewards <span class="highlight">precision</span>.</p>
+            <p>Winner's Curse logic ensures deep pockets can't just buy the win. You have to be <span class="accent">perfect</span>.</p>
+        </div>
+
+        <!-- SLIDE 7: CLOSER -->
+        <div class="slide" id="slide-7">
+            <h2>MISSION ACCOMPLISHED</h2>
+            <h1>JOIN THE BLITZ.</h1>
+            <p><b>APK:</b> COMPLIED & READY</p>
+            <p><b>GITHUB:</b> PUSHED & AUDITED</p>
+            <h1 style="font-size: 1.5rem; margin-top: 2rem;">LET'S SHIFT THE META.</h1>
+        </div>
+
+        <div class="slide-counter">LOG_ENTRY: 0<span id="slide-num">1</span></div>
+
+        <div class="slide-nav">
+            <button class="nav-btn" onclick="prevSlide()">[BACK]</button>
+            <button class="nav-btn" onclick="nextSlide()">[NEXT_CMD]</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 7;
+
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            document.getElementById(`slide-${currentSlide}`).classList.add('active');
+            document.getElementById('slide-num').innerText = currentSlide;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                updateSlide();
+            } else {
+                // Restart
+                currentSlide = 1;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+    </script>
+</body>
+</html>
