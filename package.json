@@ -22,7 +22,7 @@
     "bn.js": "^5.2.3",
     "buffer": "6.0.3",
     "crypto-browserify": "^3.12.1",
-    "expo": "~51.0.39",
+    "expo": "~55.0.5",
     "expo-av": "~14.0.7",
     "expo-build-properties": "~0.12.5",
     "expo-constants": "16.0.2",
