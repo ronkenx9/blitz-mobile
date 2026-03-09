@@ -42,6 +42,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7e9801e9-b1d4-4da8-aa6e-221c18285573"
+      }
+    },
+    "owner": "roninxx"
   }
 }
