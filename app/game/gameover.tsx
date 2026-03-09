@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { useBlitzGame, PlayerStateData } from '../../src/hooks/useBlitzGame';
@@ -7,6 +7,9 @@ import { useMobileWallet } from '../../src/hooks/useMobileWallet';
 import { THEME } from '../../src/theme';
 import { ArcadeButton, PixelBox } from '../../src/components/ArcadeUI';
 import { useAIGame, AIPlayerState } from '../../src/hooks/useAIGame';
+import { APP_IDENTITY } from '../../src/utils/constants';
+import { usePlayerProfile } from '../../src/hooks/usePlayerProfile';
+import { useSounds } from '../../src/hooks/useSounds';
 
 const { width } = Dimensions.get('window');
 
@@ -27,7 +30,27 @@ export default function GameOverScreen() {
 
     const winner = isAi ? aiGame.winner : (game?.winner ? players.find(p => p.name.includes(game.winner!.toBase58().slice(0, 4))) : null);
 
+    const { play, stopMusic } = useSounds();
+
+    useEffect(() => {
+        stopMusic();
+        if (winner?.isYou) {
+            play('victory');
+        } else {
+            play('defeat');
+        }
+    }, [winner?.isYou]);
     const sortedPlayers = [...players].sort((a, b) => b.xp - a.xp);
+
+    const { recordGame } = usePlayerProfile();
+
+    React.useEffect(() => {
+        if (winner && isAi) {
+            const playerWon = winner.isYou;
+            const playerScore = players.find(p => p.isYou)?.xp || 0;
+            recordGame(playerWon, playerScore);
+        }
+    }, [winner]);
 
     return (
         <View style={styles.container}>
@@ -48,7 +71,7 @@ export default function GameOverScreen() {
                         <Text style={styles.champEmoji}>{winner?.emoji || "👤"}</Text>
                         <Text style={styles.champName}>{winner?.name || "???"}</Text>
                         <View style={styles.prizeWrap}>
-                            <Text style={styles.prizeVal}>{winner?.xp || 0} XP</Text>
+                            <Text style={styles.prizeVal}>◎ {((winner?.xp || 0) / 1e9).toFixed(3)} SOL</Text>
                             <Text style={styles.prizeLbl}>TOTAL XP EARNED</Text>
                         </View>
                     </PixelBox>
@@ -61,7 +84,7 @@ export default function GameOverScreen() {
                             <Text style={styles.pRank}>{i + 1}</Text>
                             <Text style={styles.pEmoji}>{p.emoji}</Text>
                             <Text style={styles.pName}>{p.name}{p.isYou ? " ✨" : ""}</Text>
-                            <Text style={styles.pScore}>{p.xp} XP</Text>
+                            <Text style={styles.pScore}>◎ {(p.xp / 1e9).toFixed(3)} SOL</Text>
                         </View>
                     ))}
                 </View>
@@ -71,7 +94,10 @@ export default function GameOverScreen() {
                         <ArcadeButton
                             title="🏆 COLLECT XP & EXIT"
                             variant="gold"
-                            onPress={() => router.replace('/')}
+                            onPress={() => {
+                                play('button_tap');
+                                router.replace('/');
+                            }}
                             style={styles.actionBtn}
                         />
                     ) : (
@@ -79,13 +105,19 @@ export default function GameOverScreen() {
                             <ArcadeButton
                                 title="💰 CLAIM REWARDS"
                                 variant="gold"
-                                onPress={() => settleGame()}
+                                onPress={() => {
+                                    play('button_tap');
+                                    settleGame();
+                                }}
                                 style={styles.actionBtn}
                             />
                             <ArcadeButton
                                 title="🏠 RETURN HOME"
                                 variant="purple"
-                                onPress={() => router.replace('/')}
+                                onPress={() => {
+                                    play('button_tap');
+                                    router.replace('/');
+                                }}
                                 style={styles.actionBtn}
                             />
                         </>

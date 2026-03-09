@@ -7,6 +7,8 @@ import { THEME } from '../src/theme';
 import { usePathname, router } from 'expo-router';
 import { MobileWalletProvider } from '@wallet-ui/react-native-web3js';
 import { clusterApiUrl } from '@solana/web3.js';
+import { useSounds } from '../src/hooks/useSounds';
+import { useState, useEffect } from 'react';
 
 const SOLANA_CHAIN = 'solana:devnet';
 const SOLANA_ENDPOINT = clusterApiUrl('devnet');
@@ -18,10 +20,11 @@ const APP_IDENTITY = {
 
 const PHASES = [
     { key: 'lobby', icon: '⚔', label: 'LOBBY', href: '/' },
+    { key: 'legends', icon: '🏆', label: 'LEGENDS', href: '/legends' },
+    { key: 'profile', icon: '👤', label: 'PROFILE', href: '/profile' },
     { key: 'bidding', icon: '🔮', label: 'BID', href: '/game/bidding' },
     { key: 'reveal', icon: '👁', label: 'REVEAL', href: '/game/reveal' },
-    { key: 'gameover', icon: '👑', label: 'GAME OVER', href: '/game/gameover' },
-    { key: 'legends', icon: '🏆', label: 'LEGENDS', href: '/legends' },
+    { key: 'gameover', icon: '👑', label: 'OVER', href: '/game/gameover' },
 ];
 
 export default function RootLayout() {
@@ -30,6 +33,23 @@ export default function RootLayout() {
         PressStart2P_400Regular,
         VT323_400Regular,
     });
+
+    const { startMusic, toggleMute, play } = useSounds();
+    const [isMuted, setIsMuted] = useState(false);
+
+    useEffect(() => {
+        if (fontsLoaded) {
+            const timer = setTimeout(() => {
+                startMusic();
+            }, 800);
+            return () => clearTimeout(timer);
+        }
+    }, [fontsLoaded]);
+
+    const handleMuteToggle = async () => {
+        const muted = await toggleMute();
+        setIsMuted(muted);
+    };
 
     if (!fontsLoaded) {
         return (
@@ -43,12 +63,15 @@ export default function RootLayout() {
         pathname.includes('/game/bidding') ? 'bidding' :
             pathname.includes('/game/reveal') ? 'reveal' :
                 pathname.includes('/game/gameover') ? 'gameover' :
-                    pathname.includes('/legends') ? 'legends' : 'lobby';
+                    pathname.includes('/legends') ? 'legends' :
+                        pathname.includes('/profile') ? 'profile' : 'lobby';
 
     const navigateToPhase = (key: string, href: string) => {
+        play('button_tap');
         // Only allow manual navigation to Lobby and Legends for now
+        // Only allow switching to Lobby, Legends or Profile outside of active game
         // to prevent game state desync
-        if (key === 'lobby' || key === 'legends') {
+        if (key === 'lobby' || key === 'legends' || key === 'profile') {
             router.push(href as any);
         }
     };
@@ -73,7 +96,7 @@ export default function RootLayout() {
                             const isInActiveGame = currentKey === 'bidding' || currentKey === 'reveal';
 
                             let isLocked = false;
-                            if (p.key === 'legends') {
+                            if (p.key === 'legends' || p.key === 'profile') {
                                 isLocked = isInActiveGame;
                             } else if (p.key === 'lobby') {
                                 isLocked = false;
@@ -97,6 +120,19 @@ export default function RootLayout() {
                                 </TouchableOpacity>
                             );
                         })}
+
+                        {/* Mute Toggle */}
+                        <TouchableOpacity
+                            style={styles.tab}
+                            onPress={handleMuteToggle}
+                        >
+                            <Text style={styles.tabIcon}>
+                                {isMuted ? '🔇' : '🔊'}
+                            </Text>
+                            <Text style={styles.tabLabel}>
+                                {isMuted ? 'UNMUTE' : 'MUTE'}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </ArcadeBackground>

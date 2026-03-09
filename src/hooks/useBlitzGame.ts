@@ -39,7 +39,7 @@ export type RoundItemData = {
     winner: anchor.web3.PublicKey | null;
 };
 
-export function useBlitzGame(gameIdStr?: string) {
+export function useBlitzGame(gameIdStr?: string, enabled: boolean = true) {
     const { account } = useMobileWallet();
     const [game, setGame] = useState<GameData | null>(null);
     const [myState, setMyState] = useState<PlayerStateData | null>(null);
@@ -128,12 +128,12 @@ export function useBlitzGame(gameIdStr?: string) {
     };
 
     useEffect(() => {
-        if (!programMainnet || !gameId) return;
+        if (!programMainnet || !gameId || !enabled) return;
 
         refetch();
         const interval = setInterval(refetch, 2000);
         return () => clearInterval(interval);
-    }, [programMainnet, gameId, account]);
+    }, [programMainnet, gameId, gameIdStr, account]);
 
     return {
         game,

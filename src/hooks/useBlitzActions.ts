@@ -30,7 +30,7 @@ import type { Blitz } from '../idl/blitz';
 import { useMobileWallet } from './useMobileWallet';
 
 export function useBlitzActions(gameIdNumber: number) {
-    const { account, signAndSendTransaction, signMessage, connection } = useMobileWallet();
+    const { account, signAndSendTransactions, signMessage, connection } = useMobileWallet();
     const teeAuthTokenRef = useRef<string | null>(null);
 
     const publicKey = account ? new PublicKey(account.address) : null;
@@ -83,10 +83,10 @@ export function useBlitzActions(gameIdNumber: number) {
         const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
         tx.recentBlockhash = blockhash;
         tx.feePayer = publicKey;
-        // SDK signAndSendTransaction(tx, minContextSlot)
+
         const slot = await conn.getSlot();
-        const sig = await signAndSendTransaction(tx as any, slot);
-        return sig;
+        const sigs = await signAndSendTransactions([tx as any], slot);
+        return sigs[0];
     };
 
     const createGame = async () => {

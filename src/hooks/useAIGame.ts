@@ -79,7 +79,8 @@ export type AIPlayerState = {
     emoji: string;
     isBot: boolean;
     isYou: boolean;
-    xp: number;
+    xp: number; // For cumulative SOL display (actually score in lamports)
+    score: number; // Current round delta or cumulative total
     currentBid: number;
     hasBid: boolean;
     isEliminated: boolean;
@@ -103,6 +104,7 @@ let globalGameOver = false;
 let globalLastPlayerBid = 0;
 let globalBotBidTimers: string[] = [];
 let globalLastEliminated: string | null = null;
+let globalIsResolved = false;
 let listeners: Array<(s: any) => void> = [];
 
 const notify = () => {
@@ -114,6 +116,7 @@ const notify = () => {
         gameOver: globalGameOver,
         botBidTimers: globalBotBidTimers,
         lastEliminated: globalLastEliminated,
+        isResolved: globalIsResolved,
     };
     listeners.forEach(l => l(s));
 };
@@ -128,6 +131,7 @@ export function useAIGame() {
         gameOver: globalGameOver,
         botBidTimers: globalBotBidTimers,
         lastEliminated: globalLastEliminated,
+        isResolved: globalIsResolved,
     });
 
     useEffect(() => {
@@ -150,6 +154,7 @@ export function useAIGame() {
         globalBotBidTimers = [];
         globalLastEliminated = null;
         globalLastPlayerBid = 0;
+        globalIsResolved = false;
 
         // Reset bids for all players
         globalPlayers = globalPlayers.map(p => ({
@@ -169,6 +174,7 @@ export function useAIGame() {
                 isBot: false,
                 isYou: true,
                 xp: 0,
+                score: 0,
                 currentBid: 0,
                 hasBid: false,
                 isEliminated: false,
@@ -179,6 +185,7 @@ export function useAIGame() {
                 isBot: true,
                 isYou: false,
                 xp: 0,
+                score: 0,
                 currentBid: 0,
                 hasBid: false,
                 isEliminated: false,
@@ -233,20 +240,19 @@ export function useAIGame() {
         notify();
     }, []);
 
-    // Resolve the round — find winner, apply scoring, eliminate lowest
+    // Resolve the round — find winner, apply Winner's Curse, eliminate lowest
     const resolveRound = useCallback(() => {
-        if (!globalRoundItem) {
-            console.log("[AI] Skipping resolveRound: No round item");
+        if (!globalRoundItem || globalIsResolved) {
+            console.log("[AI] resolveRound skipped: already resolved or no item");
             return;
         }
 
         const tv = globalRoundItem.marketValue;
         let updated = [...globalPlayers];
 
-        console.log(`[AI] Resolving Round. Item Value: ${tv}`);
-        updated.forEach(p => console.log(` - ${p.name}: Bid ${p.currentBid}, isYou: ${p.isYou}`));
+        console.log(`[AI] Resolving Winner's Curse. True Value: ${tv}`);
 
-        // Find highest bidder among non-eliminated
+        // 1. Find highest bidder among non-eliminated
         let highestBid = 0;
         let highestIdx = -1;
 
@@ -258,72 +264,29 @@ export function useAIGame() {
             }
         }
 
-        const startingPlayers = 6;
-        const playersAlive = updated.filter(p => !p.isEliminated).length;
+        // Reset current round scores
+        updated = updated.map(p => ({ ...p, score: 0 }));
 
-        // Calculation for all active players
-        for (let i = 0; i < updated.length; i++) {
-            if (updated[i].isEliminated) continue;
-
-            const p = updated[i];
-            let roundScore = 0;
-            const bidRatio = p.currentBid / tv;
-            const didWin = (i === highestIdx);
-
-            // 1. ACCURACY POINTS (0-5000 for winners, 0-3000 for losers)
-            if (bidRatio < 0.5 && p.currentBid > 0) {
-                roundScore += 0;
-            } else if (p.currentBid === 0) {
-                roundScore -= 2000;
-            } else {
-                const accuracy = 1 - Math.abs(tv - p.currentBid) / tv;
-                const baseAccuracy = Math.floor(accuracy * 5000);
-
-                if (didWin) {
-                    if (bidRatio > 1.2) {
-                        roundScore += 0;
-                    } else {
-                        roundScore += baseAccuracy;
-                    }
-                } else {
-                    // Boosted loser points: 80% weight instead of raw min
-                    roundScore += Math.floor(baseAccuracy * 0.8);
-                }
-            }
-
-            // 2. SCALED KILL BONUS (10,000 base)
-            if (didWin) {
-                const killMultiplier = startingPlayers / playersAlive;
-                let killBonus = 10000 * killMultiplier;
-
-                if (bidRatio > 1.2) {
-                    killBonus *= 0.5;
-                }
-
-                roundScore += Math.floor(killBonus);
-
-                if (p.currentBid < tv) {
-                    roundScore *= 2;
-                }
-            }
-
-            updated[i] = {
-                ...p,
-                xp: p.xp + roundScore
+        // 2. Apply Winner's Curse ONLY to winner
+        if (highestIdx >= 0) {
+            const delta = tv - highestBid; // lamports (positive = underbid, negative = overbid)
+            updated[highestIdx] = {
+                ...updated[highestIdx],
+                score: delta,
+                xp: updated[highestIdx].xp + delta
             };
+            console.log(`[AI] Winner: ${updated[highestIdx].name} | Delta: ${delta}`);
         }
 
-        // Find lowest score among non-eliminated
-        // GRACE PERIOD: No elimination in Round 1
-        const activePlayersAfter = updated.filter(p => !p.isEliminated);
-        if (activePlayersAfter.length > 1 && globalCurrentRound > 1) {
-            let lowestXpValue = Infinity;
+        // 3. Find lowest cumulative score (xp) among non-eliminated
+        if (globalCurrentRound > 1) { // Grace period for Round 1
+            let lowestScore = Infinity;
             let lowestIdx = -1;
 
             for (let i = 0; i < updated.length; i++) {
                 if (updated[i].isEliminated) continue;
-                if (updated[i].xp < lowestXpValue) {
-                    lowestXpValue = updated[i].xp;
+                if (updated[i].xp < lowestScore) {
+                    lowestScore = updated[i].xp;
                     lowestIdx = i;
                 }
             }
@@ -331,18 +294,21 @@ export function useAIGame() {
             if (lowestIdx >= 0) {
                 globalLastEliminated = updated[lowestIdx].name;
                 updated[lowestIdx] = { ...updated[lowestIdx], isEliminated: true };
+                console.log(`[AI] Eliminated: ${updated[lowestIdx].name}`);
             }
         }
 
         globalPlayers = updated;
+        globalIsResolved = true;
 
-        // Check game over
+        // 4. Check if game is over
         const remaining = updated.filter(p => !p.isEliminated);
         if (remaining.length <= 1 || globalCurrentRound >= totalRounds) {
             globalGameOver = true;
         }
+
         notify();
-    }, []);
+    }, [totalRounds]);
 
     const autoResolveGame = useCallback(async () => {
         while (!globalGameOver) {
@@ -376,6 +342,7 @@ export function useAIGame() {
         submitBotBids,
         resolveRound,
         autoResolveGame,
+        isResolved: state.isResolved,
         botBidTimers: state.botBidTimers,
         lastEliminated: state.lastEliminated,
         setBotBidTimers: (timers: string[]) => {

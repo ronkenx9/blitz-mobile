@@ -9,6 +9,8 @@ import { useMobileWallet } from '../../src/hooks/useMobileWallet';
 import { useAIGame } from '../../src/hooks/useAIGame';
 import { THEME } from '../../src/theme';
 import { ArcadeButton, PixelBox } from '../../src/components/ArcadeUI';
+import { ITEM_NAMES } from '../../src/utils/constants';
+import { useSounds } from '../../src/hooks/useSounds';
 
 const { width } = Dimensions.get('window');
 
@@ -21,16 +23,47 @@ const opponents = [
 
 export default function BiddingScreen() {
     const { id: gameIdStr, mode } = useLocalSearchParams<{ id: string, mode: 'ai' | 'pvp' }>();
-    const { game, myState, roundItem } = useBlitzGame(gameIdStr);
+    const { game, myState, roundItem: pvpRoundItem } = useBlitzGame(gameIdStr, mode === 'pvp');
     const { submitBid } = useBlitzActions(Number(gameIdStr));
     const { account } = useMobileWallet();
     const aiGame = useAIGame();
 
-    const [bidPercent, setBidPercent] = useState(50);
+    const isAi = mode === 'ai';
+    const roundItem = isAi ? aiGame.roundItem : pvpRoundItem;
+
+    // Resolve item name and emoji
+    const itemName = roundItem
+        ? ITEM_NAMES[roundItem.itemNameIndex % ITEM_NAMES.length]
+        : '🔮 MYSTERY ITEM';
+
+    const itemEmoji = itemName.split(' ')[0];
+    const itemLabel = itemName.split(' ').slice(1).join(' ');
+
+    const { play } = useSounds();
+
+    const [bidValue, setBidValue] = useState(0.01); // Bid value in SOL
     const [timeLeft, setTimeLeft] = useState(10);
     const [loading, setLoading] = useState(false);
     const [hasBid, setHasBid] = useState(false);
     const [thinkingBots, setThinkingBots] = useState<number[]>([]);
+
+    // Sound effect on round start
+    useEffect(() => {
+        if (aiGame.gameStarted) {
+            play('round_start');
+        }
+    }, [aiGame.gameStarted]);
+
+    // Countdown sounds
+    useEffect(() => {
+        if (!hasBid && timeLeft > 0) {
+            if (timeLeft <= 3) {
+                play('countdown_urgent');
+            } else {
+                play('countdown_tick');
+            }
+        }
+    }, [timeLeft, hasBid]);
 
     // Timer Logic
     useEffect(() => {
@@ -47,12 +80,13 @@ export default function BiddingScreen() {
         return () => clearInterval(timer);
     }, [timeLeft, hasBid]);
 
-    const solVal = (bidPercent / 100 * 0.09 + 0.01);
+    const solVal = bidValue; // bidValue is already in SOL
     const circumference = 2 * Math.PI * 26;
     const strokeDashoffset = circumference - (timeLeft / 10) * circumference;
 
     const handleBid = async (isExpiry = false) => {
         if (loading || hasBid) return;
+        play('bid_locked');
         setHasBid(true);
         setLoading(true);
 
@@ -68,6 +102,7 @@ export default function BiddingScreen() {
                 const aiBots = opponents;
                 for (let i = 0; i < aiBots.length; i++) {
                     await new Promise(r => setTimeout(r, 600));
+                    play('bot_thinking');
                     setThinkingBots(prev => [...prev, i]);
                 }
 
@@ -98,6 +133,20 @@ export default function BiddingScreen() {
         }
     };
 
+    // Convert bidValue (0.01-0.10) to a percentage for slider display (0-100)
+    const bidPercentForSlider = ((bidValue - 0.01) / 0.09) * 100;
+
+    // Convert slider percentage back to bidValue
+    const handleSliderChange = (val: number) => {
+        const newBidValue = (val / 100) * 0.09 + 0.01;
+        setBidValue(newBidValue);
+    };
+
+    const handleQuickBid = (percent: number) => {
+        const val = 0.01 + (0.09 * percent);
+        setBidValue(val);
+    };
+
     return (
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
@@ -107,12 +156,19 @@ export default function BiddingScreen() {
                     <Text style={styles.roundText}>⚔ ROUND {mode === 'ai' ? Math.max(1, aiGame.currentRound) : (game?.currentRound || 1)} / 5</Text>
                 </View>
 
-                <PixelBox variant="purple" style={styles.itemCard}>
-                    <Text style={styles.itemEmoji}>{mode === 'ai' ? '💎' : '💎'}</Text>
-                    <Text style={styles.itemName}>
-                        {mode === 'ai' ? (aiGame.roundItem ? `ITEM #${aiGame.roundItem.itemNameIndex}` : "SOLANA DIAMOND") : (roundItem ? `ITEM #${roundItem.itemNameIndex}` : "SOLANA DIAMOND")}
-                    </Text>
-                    <Text style={styles.itemHint}>ESTIMATE THE TRUE MARKET VALUE</Text>
+                <PixelBox variant="panel" style={styles.itemCard}>
+                    <Text style={styles.itemEmoji}>{itemEmoji}</Text>
+                    <Text style={styles.itemName}>{itemLabel}</Text>
+
+                    <View style={styles.cursebox}>
+                        <Text style={styles.curseLabel}>WINNER'S CURSE</Text>
+                        <Text style={styles.curseFormula}>
+                            Score = True Value − Your Bid
+                        </Text>
+                        <Text style={styles.curseWarning}>
+                            Overbid = Penalty
+                        </Text>
+                    </View>
                 </PixelBox>
 
                 <View style={styles.countdownRing}>
@@ -129,7 +185,7 @@ export default function BiddingScreen() {
                                 stroke={THEME.colors.gold}
                                 strokeWidth="4"
                                 fill="none"
-                                strokeDasharray={`${circumference} ${circumference}`}
+                                strokeDasharray={`${circumference} ${circumference} `}
                                 strokeDashoffset={strokeDashoffset}
                                 strokeLinecap="square"
                             />
@@ -144,7 +200,7 @@ export default function BiddingScreen() {
                     <Text style={styles.bidSol}>
                         ◎ {solVal.toFixed(3)}
                     </Text>
-                    <Text style={styles.bidPct}>{bidPercent.toFixed(0)}% OF RANGE</Text>
+                    <Text style={styles.bidPct}>{(bidPercentForSlider).toFixed(0)}% OF RANGE</Text>
                 </View>
 
                 <View style={styles.sliderWrap}>
@@ -152,11 +208,11 @@ export default function BiddingScreen() {
                         style={styles.slider}
                         minimumValue={0}
                         maximumValue={100}
-                        value={bidPercent}
-                        onValueChange={setBidPercent}
+                        value={bidPercentForSlider}
+                        onValueChange={handleSliderChange}
                         minimumTrackTintColor={THEME.colors.purple}
                         maximumTrackTintColor={THEME.colors.border}
-                        thumbTintColor={THEME.colors.gold}
+                        thumbTintColor={THEME.colors.crimson}
                     />
                     <View style={styles.rangeLabels}>
                         <Text style={styles.rangeText}>0.010 SOL</Text>
@@ -169,7 +225,15 @@ export default function BiddingScreen() {
                         <TouchableOpacity
                             key={l}
                             style={styles.qb}
-                            onPress={() => setBidPercent(idx * 25)}
+                            onPress={() => {
+                                play('button_tap');
+                                let newBid = 0.01;
+                                if (idx === 1) newBid = 0.01 + (0.09 * 0.25);
+                                else if (idx === 2) newBid = 0.01 + (0.09 * 0.50);
+                                else if (idx === 3) newBid = 0.01 + (0.09 * 0.75);
+                                else if (idx === 4) newBid = 0.10;
+                                setBidValue(newBid);
+                            }}
                         >
                             <Text style={styles.qbText}>{l}</Text>
                         </TouchableOpacity>
@@ -326,6 +390,36 @@ const styles = StyleSheet.create({
         borderColor: THEME.colors.border,
         paddingVertical: 8,
         alignItems: 'center',
+    },
+    cursebox: {
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        borderWidth: 1,
+        borderColor: 'rgba(232,184,75,0.2)',
+        padding: 10,
+        borderRadius: 4,
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    curseLabel: {
+        fontFamily: THEME.fonts.pixel,
+        fontSize: 8,
+        color: THEME.colors.gold,
+        marginBottom: 6,
+    },
+    curseFormula: {
+        color: '#c8d8e8',
+        fontSize: 12,
+        marginBottom: 4,
+        textAlign: 'center',
+    },
+    curseWarning: {
+        color: THEME.colors.crimson,
+        fontSize: 10,
+        fontStyle: 'italic',
+    },
+    actionSection: {
+        paddingHorizontal: 16,
+        paddingTop: 10,
     },
     qbText: {
         fontFamily: THEME.fonts.pixel,

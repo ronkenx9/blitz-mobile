@@ -1077,6 +1077,19 @@
       ]
     },
     {
+      "name": "PlayerProfile",
+      "discriminator": [
+        123,
+        112,
+        114,
+        111,
+        102,
+        105,
+        108,
+        101
+      ]
+    },
+    {
       "name": "PlayerState",
       "discriminator": [
         56,
@@ -1333,6 +1346,34 @@
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlayerProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "wins",
+            "type": "u32"
+          },
+          {
+            "name": "games_played",
+            "type": "u32"
+          },
+          {
+            "name": "best_score",
+            "type": "u64"
           }
         ]
       }
